@@ -9,9 +9,11 @@ import Settings from "./pages/Settings";
 import Stats from "./pages/Stats";
 import Privacy from "./pages/Privacy";
 import { useThemeStore } from "./stores/themeStore";
+import { useGlobalShortcut } from "./hooks/useGlobalShortcut";
 
 function App() {
   const { theme } = useThemeStore();
+  useGlobalShortcut();
 
   useEffect(() => {
     const root = document.documentElement;

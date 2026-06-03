@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { Zap, Globe, Mic2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Zap, Globe, Mic2, AlertTriangle, ExternalLink } from "lucide-react";
 import RecordButton from "../components/RecordButton";
 import AudioVisualizer from "../components/AudioVisualizer";
 import TranscriptionCard from "../components/TranscriptionCard";
@@ -10,10 +10,17 @@ import { invoke } from "@tauri-apps/api/core";
 export default function Dashboard() {
   const { mode, lastTranscription, error, clearError } = useRecordingStore();
   const { records, fetchHistory } = useHistoryStore();
+  const [hasAccessibility, setHasAccessibility] = useState<boolean | null>(null);
 
   useEffect(() => {
     fetchHistory(5, 0);
   }, [fetchHistory, lastTranscription]);
+
+  useEffect(() => {
+    invoke<boolean>("check_accessibility_permission")
+      .then(setHasAccessibility)
+      .catch(() => setHasAccessibility(false));
+  }, []);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -23,8 +30,42 @@ export default function Dashboard() {
     await invoke("inject_text", { text });
   };
 
+  const openAccessibility = () => {
+    invoke("open_accessibility_settings");
+  };
+
+  const openMicrophone = () => {
+    invoke("open_microphone_settings");
+  };
+
   return (
     <div className="max-w-2xl mx-auto space-y-8">
+      {hasAccessibility === false && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                Accessibility Permission Required
+              </h3>
+              <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                VoxForge needs Accessibility access for global shortcuts and text injection.
+              </p>
+              <div className="flex gap-2 mt-3">
+                <button onClick={openAccessibility} className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5">
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Open Accessibility Settings
+                </button>
+                <button onClick={openMicrophone} className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5">
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Microphone Settings
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="text-center space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">Voice Dictation</h1>
         <p className="text-sm text-surface-500">

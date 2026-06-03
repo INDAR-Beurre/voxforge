@@ -1,31 +1,40 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRecordingStore } from "../stores/recordingStore";
 
 export function useGlobalShortcut() {
-  const { state, startRecording, transcribeAndInject } = useRecordingStore();
+  const storeRef = useRef(useRecordingStore.getState());
 
   useEffect(() => {
-    let registered = false;
+    return useRecordingStore.subscribe((state) => {
+      storeRef.current = state;
+    });
+  }, []);
+
+  useEffect(() => {
+    let cleanup: (() => void) | null = null;
 
     const setup = async () => {
       try {
-        const { register } = await import(
+        const { register, unregister } = await import(
           "@tauri-apps/plugin-global-shortcut"
         );
 
         await register("CommandOrControl+Shift+Space", async (event) => {
+          const { state, startRecording, transcribeAndInject } = storeRef.current;
           if (event.state === "Pressed") {
             if (state === "idle") {
               await startRecording();
             }
           } else if (event.state === "Released") {
-            if (state === "recording") {
+            if (storeRef.current.state === "recording") {
               await transcribeAndInject();
             }
           }
         });
 
-        registered = true;
+        cleanup = () => {
+          unregister("CommandOrControl+Shift+Space").catch(() => {});
+        };
       } catch (e) {
         console.warn("Failed to register global shortcut:", e);
       }
@@ -34,11 +43,7 @@ export function useGlobalShortcut() {
     setup();
 
     return () => {
-      if (registered) {
-        import("@tauri-apps/plugin-global-shortcut").then(({ unregister }) => {
-          unregister("CommandOrControl+Shift+Space").catch(() => {});
-        });
-      }
+      cleanup?.();
     };
-  }, [state, startRecording, transcribeAndInject]);
+  }, []);
 }

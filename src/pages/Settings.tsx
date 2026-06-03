@@ -207,6 +207,25 @@ export default function Settings() {
           />
         </SettingRow>
       </Section>
+
+      <Section title="Permissions">
+        <SettingRow label="Accessibility">
+          <button
+            onClick={() => invoke("open_accessibility_settings")}
+            className="btn-secondary text-xs py-1.5 px-3"
+          >
+            Open Settings
+          </button>
+        </SettingRow>
+        <SettingRow label="Microphone">
+          <button
+            onClick={() => invoke("open_microphone_settings")}
+            className="btn-secondary text-xs py-1.5 px-3"
+          >
+            Open Settings
+          </button>
+        </SettingRow>
+      </Section>
     </div>
   );
 }

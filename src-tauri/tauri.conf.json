@@ -64,22 +64,5 @@
     },
     "category": "Productivity"
   },
-  "plugins": {
-    "global-shortcut": {
-      "all": true
-    },
-    "fs": {
-      "all": true,
-      "scope": ["$APPDATA/**", "$HOME/.voxforge/**"]
-    },
-    "shell": {
-      "open": true
-    },
-    "clipboard-manager": {
-      "all": true
-    },
-    "notification": {
-      "all": true
-    }
-  }
+  "plugins": {}
 }

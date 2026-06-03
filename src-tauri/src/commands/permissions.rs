@@ -2,19 +2,33 @@ use std::process::Command;
 
 #[tauri::command]
 pub async fn open_accessibility_settings() -> Result<(), String> {
-    Command::new("open")
+    // Try macOS 13+ URL first, fall back to older one
+    let result = Command::new("open")
         .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
-        .spawn()
-        .map_err(|e| e.to_string())?;
+        .spawn();
+
+    if result.is_err() {
+        Command::new("open")
+            .arg("x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Accessibility")
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
     Ok(())
 }
 
 #[tauri::command]
 pub async fn open_microphone_settings() -> Result<(), String> {
-    Command::new("open")
+    // macOS 13+ (Ventura)
+    let result = Command::new("open")
         .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")
-        .spawn()
-        .map_err(|e| e.to_string())?;
+        .spawn();
+
+    if result.is_err() {
+        Command::new("open")
+            .arg("x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Microphone")
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
     Ok(())
 }
 
@@ -55,6 +69,41 @@ pub async fn check_accessibility_permission() -> Result<bool, String> {
 }
 
 #[tauri::command]
+pub async fn check_microphone_permission() -> Result<String, String> {
+    // Try to list audio devices - if we get any, we have permission
+    // If permission was never asked, attempting to record will trigger the prompt
+    let output = Command::new("osascript")
+        .arg("-e")
+        .arg(r#"do shell script "system_profiler SPAudioDataType 2>/dev/null | head -1""#)
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if output.status.success() {
+        Ok("granted".to_string())
+    } else {
+        Ok("unknown".to_string())
+    }
+}
+
+#[tauri::command]
 pub async fn request_accessibility_permission() -> Result<bool, String> {
     check_accessibility_permission().await
+}
+
+#[tauri::command]
+pub async fn request_microphone_permission() -> Result<bool, String> {
+    // Trigger the microphone permission prompt by briefly attempting to capture
+    use cpal::traits::{DeviceTrait, HostTrait};
+
+    let host = cpal::default_host();
+    match host.default_input_device() {
+        Some(device) => {
+            // Just checking the config triggers the permission prompt on first use
+            match device.default_input_config() {
+                Ok(_) => Ok(true),
+                Err(_) => Ok(false),
+            }
+        }
+        None => Ok(false),
+    }
 }

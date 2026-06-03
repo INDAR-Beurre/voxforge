@@ -19,6 +19,7 @@ export default function Dashboard() {
   const { mode, lastTranscription, error, clearError } = useRecordingStore();
   const { records, fetchHistory } = useHistoryStore();
   const [hasAccessibility, setHasAccessibility] = useState<boolean | null>(null);
+  const [hasMicrophone, setHasMicrophone] = useState<boolean | null>(null);
   const [hasModel, setHasModel] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -29,6 +30,10 @@ export default function Dashboard() {
     invoke<boolean>("check_accessibility_permission")
       .then(setHasAccessibility)
       .catch(() => setHasAccessibility(false));
+
+    invoke<boolean>("request_microphone_permission")
+      .then(setHasMicrophone)
+      .catch(() => setHasMicrophone(false));
 
     invoke<WhisperModel[]>("get_available_models")
       .then((models) => {
@@ -77,6 +82,29 @@ export default function Dashboard() {
                 className="btn-primary text-xs py-1.5 px-3 mt-3"
               >
                 Go to Models
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {hasMicrophone === false && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <Mic2 className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-red-800 dark:text-red-200">
+                Microphone Permission Required
+              </h3>
+              <p className="text-xs text-red-700 dark:text-red-300 mt-1">
+                VoxForge can't access your microphone. Grant permission in System Settings.
+              </p>
+              <button
+                onClick={openMicrophone}
+                className="btn-primary text-xs py-1.5 px-3 mt-3 flex items-center gap-1.5 bg-red-600 hover:bg-red-700"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                Open Microphone Settings
               </button>
             </div>
           </div>

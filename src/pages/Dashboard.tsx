@@ -30,8 +30,12 @@ export default function Dashboard() {
     await invoke("inject_text", { text });
   };
 
-  const openAccessibility = () => {
-    invoke("open_accessibility_settings");
+  const openAccessibility = async () => {
+    await invoke("request_accessibility_permission");
+    // Re-check after a delay (user may grant in the prompt)
+    setTimeout(() => {
+      invoke<boolean>("check_accessibility_permission").then(setHasAccessibility);
+    }, 2000);
   };
 
   const openMicrophone = () => {
@@ -54,7 +58,7 @@ export default function Dashboard() {
               <div className="flex gap-2 mt-3">
                 <button onClick={openAccessibility} className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5">
                   <ExternalLink className="w-3.5 h-3.5" />
-                  Open Accessibility Settings
+                  Grant Accessibility Access
                 </button>
                 <button onClick={openMicrophone} className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5">
                   <ExternalLink className="w-3.5 h-3.5" />

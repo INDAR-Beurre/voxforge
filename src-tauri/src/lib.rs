@@ -64,6 +64,7 @@ pub fn run() {
             commands::permissions::open_accessibility_settings,
             commands::permissions::open_microphone_settings,
             commands::permissions::check_accessibility_permission,
+            commands::permissions::request_accessibility_permission,
         ])
         .run(tauri::generate_context!())
         .expect("error while running VoxForge");

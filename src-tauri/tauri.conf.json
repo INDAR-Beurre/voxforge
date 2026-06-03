@@ -1,0 +1,85 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "VoxForge",
+  "version": "0.1.0",
+  "identifier": "com.voxforge.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "VoxForge",
+        "width": 960,
+        "height": 680,
+        "minWidth": 780,
+        "minHeight": 560,
+        "center": true,
+        "decorations": true,
+        "transparent": false,
+        "resizable": true
+      },
+      {
+        "label": "widget",
+        "title": "",
+        "width": 220,
+        "height": 64,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "resizable": false,
+        "skipTaskbar": true,
+        "visible": false,
+        "x": 100,
+        "y": 100
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https://*"
+    },
+    "trayIcon": {
+      "iconPath": "icons/icon.png",
+      "iconAsTemplate": true
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["dmg", "app"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "macOS": {
+      "minimumSystemVersion": "11.0",
+      "frameworks": [],
+      "signingIdentity": null,
+      "entitlements": "Entitlements.plist"
+    },
+    "category": "Productivity"
+  },
+  "plugins": {
+    "global-shortcut": {
+      "all": true
+    },
+    "fs": {
+      "all": true,
+      "scope": ["$APPDATA/**", "$HOME/.voxforge/**"]
+    },
+    "shell": {
+      "open": true
+    },
+    "clipboard-manager": {
+      "all": true
+    },
+    "notification": {
+      "all": true
+    }
+  }
+}

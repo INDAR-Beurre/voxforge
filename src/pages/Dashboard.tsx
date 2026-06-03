@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Zap, Globe, Mic2, AlertTriangle, ExternalLink } from "lucide-react";
+import { Zap, Globe, Mic2, AlertTriangle, ExternalLink, Download } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import RecordButton from "../components/RecordButton";
 import AudioVisualizer from "../components/AudioVisualizer";
 import TranscriptionCard from "../components/TranscriptionCard";
@@ -7,10 +8,18 @@ import { useRecordingStore } from "../stores/recordingStore";
 import { useHistoryStore } from "../stores/historyStore";
 import { invoke } from "@tauri-apps/api/core";
 
+interface WhisperModel {
+  id: string;
+  name: string;
+  status: string | { Downloading: { progress: number } };
+}
+
 export default function Dashboard() {
+  const navigate = useNavigate();
   const { mode, lastTranscription, error, clearError } = useRecordingStore();
   const { records, fetchHistory } = useHistoryStore();
   const [hasAccessibility, setHasAccessibility] = useState<boolean | null>(null);
+  const [hasModel, setHasModel] = useState<boolean | null>(null);
 
   useEffect(() => {
     fetchHistory(5, 0);
@@ -20,6 +29,15 @@ export default function Dashboard() {
     invoke<boolean>("check_accessibility_permission")
       .then(setHasAccessibility)
       .catch(() => setHasAccessibility(false));
+
+    invoke<WhisperModel[]>("get_available_models")
+      .then((models) => {
+        const active = models.some(
+          (m) => m.status === "Active" || m.status === "Downloaded"
+        );
+        setHasModel(active);
+      })
+      .catch(() => setHasModel(false));
   }, []);
 
   const handleCopy = (text: string) => {
@@ -32,7 +50,6 @@ export default function Dashboard() {
 
   const openAccessibility = async () => {
     await invoke("request_accessibility_permission");
-    // Re-check after a delay (user may grant in the prompt)
     setTimeout(() => {
       invoke<boolean>("check_accessibility_permission").then(setHasAccessibility);
     }, 2000);
@@ -44,6 +61,28 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
+      {hasModel === false && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <Download className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-200">
+                Download a Transcription Model
+              </h3>
+              <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                You need to download a Whisper model before VoxForge can transcribe speech. Base (142 MB) is recommended.
+              </p>
+              <button
+                onClick={() => navigate("/models")}
+                className="btn-primary text-xs py-1.5 px-3 mt-3"
+              >
+                Go to Models
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {hasAccessibility === false && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
           <div className="flex items-start gap-3">
@@ -111,12 +150,12 @@ export default function Dashboard() {
         <StatusTile
           icon={<Zap className="w-4 h-4" />}
           label="Engine"
-          value="Local Whisper"
+          value={hasModel ? "Whisper Ready" : "No Model"}
         />
         <StatusTile
           icon={<Globe className="w-4 h-4" />}
           label="Language"
-          value="English"
+          value="Auto (EN/FR/DE)"
         />
       </div>
 

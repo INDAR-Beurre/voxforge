@@ -19,14 +19,18 @@ pub async fn transcribe_audio(
         samples
     };
 
+    if resampled.is_empty() {
+        return Err("No audio captured".to_string());
+    }
+
     let whisper = state.whisper.lock().map_err(|e| e.to_string())?;
-    let whisper_ref = whisper.as_ref().ok_or("Whisper model not loaded")?;
+    let whisper_ref = whisper.as_ref().ok_or(
+        "No transcription model loaded. Please download a model in the Models tab first."
+    )?;
 
-    let result = whisper_ref
+    whisper_ref
         .transcribe(&resampled, 16000)
-        .map_err(|e| e.to_string())?;
-
-    Ok(result)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -37,6 +41,12 @@ pub async fn transcribe_and_inject(
         *state.recording_mode.lock().map_err(|e| e.to_string())? = crate::state::RecordingState::Processing;
     }
 
+    // Get the focused app BEFORE we do anything else (it's still focused)
+    let target_app = {
+        let injector = state.text_injector.lock().map_err(|e| e.to_string())?;
+        injector.get_focused_app()
+    };
+
     let (samples, sample_rate) = {
         let mut capture = state.audio_capture.lock().map_err(|e| e.to_string())?;
         let samples = capture.stop_recording().map_err(|e| e.to_string())?;
@@ -44,7 +54,15 @@ pub async fn transcribe_and_inject(
         (samples, rate)
     };
 
+    if samples.is_empty() {
+        *state.recording_mode.lock().map_err(|e| e.to_string())? = crate::state::RecordingState::Idle;
+        return Err("No audio captured. Make sure your microphone is working.".to_string());
+    }
+
+    log::info!("Got {} samples at {}Hz ({:.1}s)", samples.len(), sample_rate, samples.len() as f32 / sample_rate as f32);
+
     let resampled = if sample_rate != 16000 {
+        log::info!("Resampling from {} to 16000", sample_rate);
         AudioProcessor::resample(&samples, sample_rate, 16000)
     } else {
         samples
@@ -52,11 +70,18 @@ pub async fn transcribe_and_inject(
 
     let result = {
         let whisper = state.whisper.lock().map_err(|e| e.to_string())?;
-        let whisper_ref = whisper.as_ref().ok_or("Whisper model not loaded")?;
+        let whisper_ref = whisper.as_ref().ok_or(
+            "No transcription model loaded. Go to Models tab and download one first."
+        )?;
         whisper_ref
             .transcribe(&resampled, 16000)
-            .map_err(|e| e.to_string())?
+            .map_err(|e| format!("Transcription failed: {}", e))?
     };
+
+    if result.text.is_empty() {
+        *state.recording_mode.lock().map_err(|e| e.to_string())? = crate::state::RecordingState::Idle;
+        return Err("No speech detected. Try speaking louder or longer.".to_string());
+    }
 
     let mut text = result.text.clone();
 
@@ -73,18 +98,13 @@ pub async fn transcribe_and_inject(
     // Apply post-processing
     text = crate::postprocess::apply_rules(&text, &state.get_post_processing_rules());
 
-    // Inject text
+    // Inject text into focused app
     {
         let injector = state.text_injector.lock().map_err(|e| e.to_string())?;
-        injector.inject(&text).map_err(|e| e.to_string())?;
+        injector.inject(&text).map_err(|e| format!("Text injection failed: {}", e))?;
     }
 
     // Save to history
-    let target_app = {
-        let injector = state.text_injector.lock().map_err(|e| e.to_string())?;
-        injector.get_focused_app()
-    };
-
     {
         let db = state.database.lock().map_err(|e| e.to_string())?;
         if let Some(ref db) = *db {

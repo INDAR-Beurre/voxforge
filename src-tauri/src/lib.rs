@@ -82,11 +82,31 @@ fn initialize_app(app_handle: &tauri::AppHandle) -> Result<(), Box<dyn std::erro
     let db = database::Database::new(db_path)?;
 
     let models_dir = app_data_dir.join("models");
-    let model_manager = models::ModelManager::new(models_dir)?;
+    let model_manager = models::ModelManager::new(models_dir.clone())?;
 
     let state = app_handle.state::<AppState>();
     *state.database.lock().unwrap() = Some(db);
     *state.model_manager.lock().unwrap() = Some(model_manager);
+
+    // Auto-load first available model
+    let model_files = ["ggml-base.bin", "ggml-small.bin", "ggml-tiny.bin", "ggml-medium.bin", "ggml-large-v3.bin"];
+    for filename in &model_files {
+        let path = models_dir.join(filename);
+        if path.exists() {
+            log::info!("Auto-loading model: {}", filename);
+            let whisper = transcription::WhisperLocal::new(path);
+            match whisper.load_model() {
+                Ok(_) => {
+                    *state.whisper.lock().unwrap() = Some(whisper);
+                    log::info!("Model {} loaded successfully", filename);
+                    break;
+                }
+                Err(e) => {
+                    log::error!("Failed to load model {}: {}", filename, e);
+                }
+            }
+        }
+    }
 
     Ok(())
 }

@@ -110,15 +110,15 @@ export default function Settings() {
             onChange={(e) => handleChange("language", e.target.value)}
             className="input w-44"
           >
-            <option value="en">English</option>
-            <option value="es">Spanish</option>
-            <option value="fr">French</option>
-            <option value="de">German</option>
-            <option value="ja">Japanese</option>
-            <option value="zh">Chinese</option>
-            <option value="ko">Korean</option>
-            <option value="pt">Portuguese</option>
-            <option value="auto">Auto-detect</option>
+            <option value="auto">Auto-detect (Recommended)</option>
+            <option value="en">English only</option>
+            <option value="fr">French only</option>
+            <option value="de">German only</option>
+            <option value="es">Spanish only</option>
+            <option value="ja">Japanese only</option>
+            <option value="zh">Chinese only</option>
+            <option value="ko">Korean only</option>
+            <option value="pt">Portuguese only</option>
           </select>
         </SettingRow>
 

@@ -27,6 +27,7 @@ impl WhisperLocal {
     }
 
     pub fn load_model(&self) -> Result<()> {
+        log::info!("Loading Whisper model from {:?}", self.model_path);
         let params = WhisperContextParameters::default();
         let ctx = WhisperContext::new_with_params(
             self.model_path.to_str().ok_or_else(|| anyhow!("Invalid model path"))?,
@@ -35,6 +36,7 @@ impl WhisperLocal {
         .map_err(|e| anyhow!("Failed to load Whisper model: {}", e))?;
 
         *self.context.lock().unwrap() = Some(ctx);
+        log::info!("Whisper model loaded successfully");
         Ok(())
     }
 
@@ -49,6 +51,8 @@ impl WhisperLocal {
 
 impl TranscriptionEngine for WhisperLocal {
     fn transcribe(&self, audio: &[f32], _sample_rate: u32) -> Result<TranscriptionResult> {
+        log::info!("Transcribing {} samples ({:.1}s of audio)", audio.len(), audio.len() as f32 / 16000.0);
+
         let guard = self.context.lock().unwrap();
         let ctx = guard
             .as_ref()
@@ -63,11 +67,20 @@ impl TranscriptionEngine for WhisperLocal {
         params.set_print_timestamps(false);
         params.set_suppress_blank(true);
         params.set_suppress_non_speech_tokens(true);
+        params.set_n_threads(4);
 
-        if let Some(ref lang) = self.language {
-            params.set_language(Some(lang));
-        } else {
-            params.set_language(Some("en"));
+        match &self.language {
+            Some(lang) if lang == "auto" => {
+                // Auto-detect: don't set language, whisper will detect
+                params.set_language(None);
+            }
+            Some(lang) => {
+                params.set_language(Some(lang));
+            }
+            None => {
+                // Default: auto-detect between en, fr, de
+                params.set_language(None);
+            }
         }
 
         let start = std::time::Instant::now();
@@ -97,8 +110,11 @@ impl TranscriptionEngine for WhisperLocal {
             });
         }
 
+        let final_text = text.trim().to_string();
+        log::info!("Transcription complete in {}ms: \"{}\"", duration_ms, &final_text[..final_text.len().min(100)]);
+
         Ok(TranscriptionResult {
-            text: text.trim().to_string(),
+            text: final_text,
             language: self.language.clone(),
             duration_ms,
             confidence: None,

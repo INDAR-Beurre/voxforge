@@ -101,6 +101,15 @@ async function showWidget() {
   try {
     const widget = await WebviewWindow.getByLabel("widget");
     if (widget) {
+      const { availableMonitors } = await import("@tauri-apps/api/window");
+      const monitors = await availableMonitors();
+      if (monitors.length > 0) {
+        const primary = monitors[0];
+        const x = Math.round((primary.size.width / primary.scaleFactor - 160) / 2);
+        const y = Math.round(primary.size.height / primary.scaleFactor - 90);
+        const { LogicalPosition } = await import("@tauri-apps/api/dpi");
+        await widget.setPosition(new LogicalPosition(x, y));
+      }
       await widget.show();
     }
   } catch (e) {

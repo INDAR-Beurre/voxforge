@@ -36,11 +36,24 @@ pub fn run() {
                 {
                     use cocoa::appkit::{NSColor, NSWindow};
                     use cocoa::base::{nil, NO};
+
                     let ns_window = widget_window.ns_window().unwrap() as cocoa::base::id;
                     unsafe {
                         ns_window.setBackgroundColor_(NSColor::clearColor(nil));
+                        ns_window.setOpaque_(NO);
                         ns_window.setHasShadow_(NO);
                     }
+
+                    // Make the WKWebView itself not draw a background
+                    let _ = widget_window.with_webview(|webview| {
+                        #[allow(unused_imports)]
+                        use objc::{msg_send, sel, sel_impl};
+                        unsafe {
+                            let wk: cocoa::base::id = webview.inner() as _;
+                            let no: objc::runtime::BOOL = objc::runtime::NO;
+                            let _: () = msg_send![wk, _setDrawsBackground: no];
+                        }
+                    });
                 }
             }
 

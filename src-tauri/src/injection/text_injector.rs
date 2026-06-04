@@ -23,8 +23,8 @@ impl Default for InjectionConfig {
         Self {
             strategy: InjectionStrategy::ClipboardPaste,
             preserve_clipboard: true,
-            paste_delay_ms: 50,
-            restore_delay_ms: 100,
+            paste_delay_ms: 100,
+            restore_delay_ms: 200,
         }
     }
 }

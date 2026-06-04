@@ -6,6 +6,8 @@
   "permissions": [
     "core:default",
     "core:event:default",
+    "core:event:allow-listen",
+    "core:event:allow-emit",
     "core:window:default",
     "core:window:allow-create",
     "core:window:allow-close",
@@ -15,6 +17,9 @@
     "core:window:allow-hide",
     "core:window:allow-set-always-on-top",
     "core:window:allow-set-focus",
+    "core:window:allow-get-all-windows",
+    "core:webview:default",
+    "core:webview:allow-get-all-webviews",
     "opener:default",
     "global-shortcut:allow-register",
     "global-shortcut:allow-unregister",

@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebviewWindow, WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useRecordingStore } from "../stores/recordingStore";
@@ -14,18 +13,64 @@ export function useGlobalShortcut() {
   }, []);
 
   useEffect(() => {
+    const current = getCurrentWebviewWindow();
+    if (current.label !== "main") return;
+
+    let cleanup: (() => void) | null = null;
+
+    const setup = async () => {
+      try {
+        const { register, unregister } = await import(
+          "@tauri-apps/plugin-global-shortcut"
+        );
+
+        await register("Control+Shift+S", async (event) => {
+          if (event.state === "Pressed") {
+            const { state, startRecording } = storeRef.current;
+            if (state === "idle") {
+              await startRecording();
+              showWidget();
+            }
+          } else if (event.state === "Released") {
+            const { state, transcribeAndInject } = storeRef.current;
+            if (state === "recording") {
+              await transcribeAndInject();
+              setTimeout(hideWidget, 1500);
+            }
+          }
+        });
+
+        cleanup = () => {
+          unregister("Control+Shift+S").catch(() => {});
+        };
+      } catch (e) {
+        console.warn("Failed to register global shortcut:", e);
+      }
+
+      // Also try fn key monitor (works if accessibility is granted)
+      try {
+        await invoke("start_fn_key_monitor");
+      } catch (_) {}
+    };
+
+    setup();
+
+    return () => {
+      cleanup?.();
+    };
+  }, []);
+
+  // Also listen for fn key events as a secondary trigger
+  useEffect(() => {
+    const current = getCurrentWebviewWindow();
+    if (current.label !== "main") return;
+
     let unlisten1: (() => void) | null = null;
     let unlisten2: (() => void) | null = null;
 
     const setup = async () => {
-      // Start the fn key monitor on the Rust side
-      try {
-        await invoke("start_fn_key_monitor");
-      } catch (e) {
-        console.warn("Failed to start fn key monitor:", e);
-      }
+      const { listen } = await import("@tauri-apps/api/event");
 
-      // Listen for fn key down → start recording + show widget
       unlisten1 = await listen("fn-key-down", async () => {
         const { state, startRecording } = storeRef.current;
         if (state === "idle") {
@@ -34,12 +79,10 @@ export function useGlobalShortcut() {
         }
       });
 
-      // Listen for fn key up → stop recording + transcribe + hide widget
       unlisten2 = await listen("fn-key-up", async () => {
         const { state, transcribeAndInject } = storeRef.current;
         if (state === "recording") {
           await transcribeAndInject();
-          // Give a small delay for the user to see "processing" state
           setTimeout(hideWidget, 1500);
         }
       });
@@ -56,13 +99,9 @@ export function useGlobalShortcut() {
 
 async function showWidget() {
   try {
-    const current = getCurrentWebviewWindow();
-    if (current.label === "widget") return;
-
     const widget = await WebviewWindow.getByLabel("widget");
     if (widget) {
       await widget.show();
-      await widget.setFocus();
     }
   } catch (e) {
     console.warn("Failed to show widget:", e);
@@ -71,9 +110,6 @@ async function showWidget() {
 
 async function hideWidget() {
   try {
-    const current = getCurrentWebviewWindow();
-    if (current.label === "widget") return;
-
     const widget = await WebviewWindow.getByLabel("widget");
     if (widget) {
       await widget.hide();

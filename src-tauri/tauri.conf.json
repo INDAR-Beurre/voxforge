@@ -27,14 +27,15 @@
         "label": "widget",
         "title": "",
         "url": "/",
-        "width": 240,
-        "height": 72,
+        "width": 180,
+        "height": 48,
         "decorations": false,
         "transparent": true,
         "alwaysOnTop": true,
         "resizable": false,
         "skipTaskbar": true,
         "visible": false,
+        "focusable": false,
         "center": true
       }
     ],

@@ -30,30 +30,16 @@ pub fn run() {
             let app_handle = app.handle().clone();
             initialize_app(&app_handle)?;
 
-            // Make widget window fully transparent on macOS
+            // Make widget window fully transparent on macOS (remove shadow)
             if let Some(widget_window) = app.get_webview_window("widget") {
                 #[cfg(target_os = "macos")]
                 {
-                    use cocoa::appkit::{NSColor, NSWindow};
-                    use cocoa::base::{nil, NO};
-
+                    use cocoa::appkit::NSWindow;
+                    use cocoa::base::NO;
                     let ns_window = widget_window.ns_window().unwrap() as cocoa::base::id;
                     unsafe {
-                        ns_window.setBackgroundColor_(NSColor::clearColor(nil));
-                        ns_window.setOpaque_(NO);
                         ns_window.setHasShadow_(NO);
                     }
-
-                    // Make the WKWebView itself not draw a background
-                    let _ = widget_window.with_webview(|webview| {
-                        #[allow(unused_imports)]
-                        use objc::{msg_send, sel, sel_impl};
-                        unsafe {
-                            let wk: cocoa::base::id = webview.inner() as _;
-                            let no: objc::runtime::BOOL = objc::runtime::NO;
-                            let _: () = msg_send![wk, _setDrawsBackground: no];
-                        }
-                    });
                 }
             }
 

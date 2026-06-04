@@ -7,3 +7,4 @@ pub mod settings;
 pub mod stats;
 pub mod injection;
 pub mod permissions;
+pub mod hotkey;

@@ -8,11 +8,15 @@ import Models from "./pages/Models";
 import Settings from "./pages/Settings";
 import Stats from "./pages/Stats";
 import Privacy from "./pages/Privacy";
+import FloatingWidget from "./components/FloatingWidget";
 import { useThemeStore } from "./stores/themeStore";
 import { useGlobalShortcut } from "./hooks/useGlobalShortcut";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 function App() {
   const { theme } = useThemeStore();
+  const isWidget = getCurrentWebviewWindow().label === "widget";
+
   useGlobalShortcut();
 
   useEffect(() => {
@@ -34,6 +38,10 @@ function App() {
       return () => mq.removeEventListener("change", handler);
     }
   }, [theme]);
+
+  if (isWidget) {
+    return <FloatingWidget />;
+  }
 
   return (
     <Routes>

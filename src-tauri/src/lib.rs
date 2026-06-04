@@ -29,6 +29,15 @@ pub fn run() {
         .setup(|app| {
             let app_handle = app.handle().clone();
             initialize_app(&app_handle)?;
+
+            // Auto-start fn key monitor for global hotkey
+            let handle_clone = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) = commands::hotkey::start_fn_key_monitor(handle_clone).await {
+                    log::error!("Failed to start fn key monitor: {}", e);
+                }
+            });
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -67,6 +76,7 @@ pub fn run() {
             commands::permissions::check_microphone_permission,
             commands::permissions::request_accessibility_permission,
             commands::permissions::request_microphone_permission,
+            commands::hotkey::start_fn_key_monitor,
         ])
         .run(tauri::generate_context!())
         .expect("error while running VoxForge");

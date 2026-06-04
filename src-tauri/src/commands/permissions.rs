@@ -36,6 +36,40 @@ pub async fn open_microphone_settings() -> Result<(), String> {
 pub async fn check_accessibility_permission() -> Result<bool, String> {
     #[cfg(target_os = "macos")]
     {
+        extern "C" {
+            fn AXIsProcessTrusted() -> bool;
+        }
+        let trusted = unsafe { AXIsProcessTrusted() };
+        Ok(trusted)
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        Ok(true)
+    }
+}
+
+#[tauri::command]
+pub async fn check_microphone_permission() -> Result<String, String> {
+    // Try to list audio devices - if we get any, we have permission
+    // If permission was never asked, attempting to record will trigger the prompt
+    let output = Command::new("osascript")
+        .arg("-e")
+        .arg(r#"do shell script "system_profiler SPAudioDataType 2>/dev/null | head -1""#)
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if output.status.success() {
+        Ok("granted".to_string())
+    } else {
+        Ok("unknown".to_string())
+    }
+}
+
+#[tauri::command]
+pub async fn request_accessibility_permission() -> Result<bool, String> {
+    #[cfg(target_os = "macos")]
+    {
         use core_foundation::base::TCFType;
         use core_foundation::boolean::CFBoolean;
         use core_foundation::dictionary::CFDictionary;
@@ -66,28 +100,6 @@ pub async fn check_accessibility_permission() -> Result<bool, String> {
     {
         Ok(true)
     }
-}
-
-#[tauri::command]
-pub async fn check_microphone_permission() -> Result<String, String> {
-    // Try to list audio devices - if we get any, we have permission
-    // If permission was never asked, attempting to record will trigger the prompt
-    let output = Command::new("osascript")
-        .arg("-e")
-        .arg(r#"do shell script "system_profiler SPAudioDataType 2>/dev/null | head -1""#)
-        .output()
-        .map_err(|e| e.to_string())?;
-
-    if output.status.success() {
-        Ok("granted".to_string())
-    } else {
-        Ok("unknown".to_string())
-    }
-}
-
-#[tauri::command]
-pub async fn request_accessibility_permission() -> Result<bool, String> {
-    check_accessibility_permission().await
 }
 
 #[tauri::command]

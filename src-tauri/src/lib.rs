@@ -100,31 +100,6 @@ fn initialize_app(app_handle: &tauri::AppHandle) -> Result<(), Box<dyn std::erro
     *state.database.lock().unwrap() = Some(db);
     *state.model_manager.lock().unwrap() = Some(model_manager);
 
-    // Trigger microphone permission prompt by briefly opening an input stream
-    {
-        use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-        let host = cpal::default_host();
-        if let Some(device) = host.default_input_device() {
-            if let Ok(config) = device.default_input_config() {
-                let stream_config = cpal::StreamConfig {
-                    channels: 1,
-                    sample_rate: config.sample_rate(),
-                    buffer_size: cpal::BufferSize::Default,
-                };
-                if let Ok(stream) = device.build_input_stream(
-                    &stream_config,
-                    |_data: &[f32], _| {},
-                    |_err| {},
-                    None,
-                ) {
-                    let _ = stream.play();
-                    std::thread::sleep(std::time::Duration::from_millis(100));
-                    drop(stream);
-                }
-            }
-        }
-        log::info!("Microphone permission triggered");
-    }
 
     // Auto-load first available model
     let model_files = ["ggml-base.bin", "ggml-small.bin", "ggml-tiny.bin", "ggml-medium.bin", "ggml-large-v3.bin"];

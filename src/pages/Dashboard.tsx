@@ -31,8 +31,8 @@ export default function Dashboard() {
       .then(setHasAccessibility)
       .catch(() => setHasAccessibility(false));
 
-    invoke<boolean>("request_microphone_permission")
-      .then(setHasMicrophone)
+    invoke<string>("check_microphone_permission")
+      .then((status) => setHasMicrophone(status === "granted"))
       .catch(() => setHasMicrophone(false));
 
     invoke<WhisperModel[]>("get_available_models")

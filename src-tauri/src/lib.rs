@@ -30,6 +30,20 @@ pub fn run() {
             let app_handle = app.handle().clone();
             initialize_app(&app_handle)?;
 
+            // Make widget window fully transparent on macOS
+            if let Some(widget_window) = app.get_webview_window("widget") {
+                #[cfg(target_os = "macos")]
+                {
+                    use cocoa::appkit::{NSColor, NSWindow};
+                    use cocoa::base::{nil, NO};
+                    let ns_window = widget_window.ns_window().unwrap() as cocoa::base::id;
+                    unsafe {
+                        ns_window.setBackgroundColor_(NSColor::clearColor(nil));
+                        ns_window.setHasShadow_(NO);
+                    }
+                }
+            }
+
             // Auto-start fn key monitor for global hotkey
             let handle_clone = app.handle().clone();
             tauri::async_runtime::spawn(async move {

@@ -1,8 +1,6 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::process::Command;
-use std::thread;
-use std::time::Duration;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum InjectionStrategy {
@@ -21,7 +19,7 @@ pub struct InjectionConfig {
 impl Default for InjectionConfig {
     fn default() -> Self {
         Self {
-            strategy: InjectionStrategy::ClipboardPaste,
+            strategy: InjectionStrategy::KeyboardSimulation,
             preserve_clipboard: true,
             paste_delay_ms: 100,
             restore_delay_ms: 200,
@@ -40,9 +38,33 @@ impl TextInjector {
 
     pub fn inject(&self, text: &str) -> Result<()> {
         match self.config.strategy {
-            InjectionStrategy::ClipboardPaste => self.inject_via_clipboard(text),
             InjectionStrategy::KeyboardSimulation => self.inject_via_keyboard(text),
+            InjectionStrategy::ClipboardPaste => self.inject_via_clipboard(text),
         }
+    }
+
+    fn inject_via_keyboard(&self, text: &str) -> Result<()> {
+        let escaped = text
+            .replace('\\', "\\\\")
+            .replace('"', "\\\"")
+            .replace('\n', "\" & return & \"");
+
+        let script = format!(
+            r#"tell application "System Events" to keystroke "{}""#,
+            escaped
+        );
+
+        let output = Command::new("osascript")
+            .arg("-e")
+            .arg(&script)
+            .output()?;
+
+        if !output.status.success() {
+            let err = String::from_utf8_lossy(&output.stderr);
+            anyhow::bail!("keystroke failed: {}", err);
+        }
+
+        Ok(())
     }
 
     fn inject_via_clipboard(&self, text: &str) -> Result<()> {
@@ -53,29 +75,13 @@ impl TextInjector {
         };
 
         self.set_clipboard(text)?;
-        thread::sleep(Duration::from_millis(self.config.paste_delay_ms));
+        std::thread::sleep(std::time::Duration::from_millis(self.config.paste_delay_ms));
         self.simulate_paste()?;
 
         if let Some(prev) = previous_clipboard {
-            thread::sleep(Duration::from_millis(self.config.restore_delay_ms));
+            std::thread::sleep(std::time::Duration::from_millis(self.config.restore_delay_ms));
             let _ = self.set_clipboard(&prev);
         }
-
-        Ok(())
-    }
-
-    fn inject_via_keyboard(&self, text: &str) -> Result<()> {
-        let script = format!(
-            r#"tell application "System Events" to keystroke "{}""#,
-            text.replace('\\', "\\\\")
-                .replace('"', "\\\"")
-                .replace('\n', "\" & return & \"")
-        );
-
-        Command::new("osascript")
-            .arg("-e")
-            .arg(&script)
-            .output()?;
 
         Ok(())
     }

@@ -22,9 +22,9 @@ impl Default for InjectionConfig {
     fn default() -> Self {
         Self {
             strategy: InjectionStrategy::ClipboardPaste,
-            preserve_clipboard: true,
-            paste_delay_ms: 80,
-            restore_delay_ms: 300,
+            preserve_clipboard: false,
+            paste_delay_ms: 50,
+            restore_delay_ms: 500,
         }
     }
 }
@@ -43,25 +43,13 @@ impl TextInjector {
     }
 
     fn inject_via_clipboard(&self, text: &str) -> Result<()> {
-        let previous_clipboard = if self.config.preserve_clipboard {
-            self.get_clipboard().ok()
-        } else {
-            None
-        };
-
         self.set_clipboard(text)?;
         thread::sleep(Duration::from_millis(self.config.paste_delay_ms));
-        self.simulate_paste_cgevent()?;
-
-        if let Some(prev) = previous_clipboard {
-            thread::sleep(Duration::from_millis(self.config.restore_delay_ms));
-            let _ = self.set_clipboard(&prev);
-        }
-
+        self.simulate_paste()?;
         Ok(())
     }
 
-    fn simulate_paste_cgevent(&self) -> Result<()> {
+    fn simulate_paste(&self) -> Result<()> {
         unsafe {
             extern "C" {
                 fn CGEventCreateKeyboardEvent(
@@ -74,24 +62,26 @@ impl TextInjector {
                 fn CFRelease(cf: *mut std::ffi::c_void);
             }
 
-            // Virtual key 9 = 'V', kCGEventFlagMaskCommand = 1 << 20
-            let cmd_flag: u64 = 1 << 20;
+            // macOS virtual key code 9 = 'V'
+            // kCGEventFlagMaskCommand = NX_COMMANDMASK = 0x00100000 (1 << 20)
+            let cmd_flag: u64 = 0x00100000;
 
             let key_down = CGEventCreateKeyboardEvent(std::ptr::null(), 9, true);
             if key_down.is_null() {
-                anyhow::bail!("Failed to create key down event");
+                anyhow::bail!("Failed to create CGEvent for Cmd+V");
             }
             CGEventSetFlags(key_down, cmd_flag);
 
             let key_up = CGEventCreateKeyboardEvent(std::ptr::null(), 9, false);
             if key_up.is_null() {
                 CFRelease(key_down);
-                anyhow::bail!("Failed to create key up event");
+                anyhow::bail!("Failed to create CGEvent for Cmd+V key up");
             }
             CGEventSetFlags(key_up, cmd_flag);
 
-            // kCGHIDEventTap = 0
+            // Post at kCGAnnotatedSessionEventTap (1) for session-level delivery
             CGEventPost(0, key_down);
+            thread::sleep(Duration::from_millis(20));
             CGEventPost(0, key_up);
 
             CFRelease(key_down);
@@ -99,11 +89,6 @@ impl TextInjector {
         }
 
         Ok(())
-    }
-
-    fn get_clipboard(&self) -> Result<String> {
-        let output = Command::new("pbpaste").output()?;
-        Ok(String::from_utf8_lossy(&output.stdout).to_string())
     }
 
     fn set_clipboard(&self, text: &str) -> Result<()> {

@@ -1,9 +1,11 @@
 [package]
 name = "voxforge"
-version = "0.1.0"
-description = "VoxForge - Privacy-first voice dictation for macOS"
+version = "1.0.0"
+description = "Privacy-first voice dictation for macOS"
 authors = ["VoxForge"]
 edition = "2021"
+license = "MIT"
+repository = "https://github.com/INDAR-Beurre/voxforge"
 
 [lib]
 name = "voxforge_lib"

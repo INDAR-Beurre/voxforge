@@ -57,13 +57,13 @@ npm run tauri build
 Or manually:
 
 ```bash
-xcrun notarytool submit target/release/bundle/dmg/VoxForge_0.1.0_aarch64.dmg \
+xcrun notarytool submit target/release/bundle/dmg/VoxForge_1.0.0_aarch64.dmg \
   --apple-id "$APPLE_ID" \
   --password "$APPLE_PASSWORD" \
   --team-id "$APPLE_TEAM_ID" \
   --wait
 
-xcrun stapler staple target/release/bundle/dmg/VoxForge_0.1.0_aarch64.dmg
+xcrun stapler staple target/release/bundle/dmg/VoxForge_1.0.0_aarch64.dmg
 ```
 
 ## Entitlements

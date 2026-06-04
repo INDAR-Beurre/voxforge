@@ -7,6 +7,11 @@ export default function FloatingWidget() {
   const barsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    document.documentElement.style.background = "transparent";
+    document.body.style.background = "transparent";
+  }, []);
+
+  useEffect(() => {
     if (state !== "recording") {
       if (frameRef.current) cancelAnimationFrame(frameRef.current);
       return;

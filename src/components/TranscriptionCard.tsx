@@ -1,5 +1,4 @@
 import { Copy, Star, Trash2, RotateCcw } from "lucide-react";
-import clsx from "clsx";
 import type { TranscriptionRecord } from "../stores/historyStore";
 
 interface Props {
@@ -20,66 +19,81 @@ export default function TranscriptionCard({
   const timeAgo = formatTimeAgo(record.timestamp);
 
   return (
-    <div className="card group hover:border-accent-200 dark:hover:border-accent-800 transition-colors">
+    <div className="card group" style={{ padding: "16px 20px", transition: "border-color 0.15s ease" }}>
       <div className="flex items-start justify-between gap-3">
-        <p className="text-sm leading-relaxed flex-1 select-text">
+        <p
+          className="flex-1 select-text"
+          style={{
+            fontSize: "14px",
+            lineHeight: "1.6",
+            color: "var(--color-text)",
+          }}
+        >
           {record.text}
         </p>
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div
+          className="flex items-center gap-0.5"
+          style={{ opacity: 0, transition: "opacity 0.12s ease" }}
+        >
           {onCopy && (
-            <button
-              onClick={() => onCopy(record.text)}
-              className="btn-ghost p-1.5"
-              title="Copy"
-            >
-              <Copy className="w-3.5 h-3.5" />
+            <button onClick={() => onCopy(record.text)} className="btn-ghost" title="Copy">
+              <Copy style={{ width: "14px", height: "14px" }} />
             </button>
           )}
           {onResend && (
-            <button
-              onClick={() => onResend(record.text)}
-              className="btn-ghost p-1.5"
-              title="Re-inject"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
+            <button onClick={() => onResend(record.text)} className="btn-ghost" title="Re-inject">
+              <RotateCcw style={{ width: "14px", height: "14px" }} />
             </button>
           )}
           {onFavorite && (
-            <button
-              onClick={() => onFavorite(record.id)}
-              className="btn-ghost p-1.5"
-              title="Favorite"
-            >
+            <button onClick={() => onFavorite(record.id)} className="btn-ghost" title="Favorite">
               <Star
-                className={clsx(
-                  "w-3.5 h-3.5",
-                  record.is_favorite && "fill-yellow-400 text-yellow-400"
-                )}
+                style={{
+                  width: "14px",
+                  height: "14px",
+                  fill: record.is_favorite ? "#ffb005" : "none",
+                  color: record.is_favorite ? "#ffb005" : "currentColor",
+                }}
               />
             </button>
           )}
           {onDelete && (
-            <button
-              onClick={() => onDelete(record.id)}
-              className="btn-ghost p-1.5 hover:text-red-500"
-              title="Delete"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
+            <button onClick={() => onDelete(record.id)} className="btn-ghost" title="Delete">
+              <Trash2 style={{ width: "14px", height: "14px" }} />
             </button>
           )}
         </div>
       </div>
 
-      <div className="flex items-center gap-3 mt-2 text-xs text-surface-500">
+      <div
+        className="flex items-center gap-3 mt-2.5"
+        style={{ fontSize: "12px", color: "var(--color-text-tertiary)" }}
+      >
         <span>{timeAgo}</span>
         <span>{record.word_count} words</span>
         <span>{formatDuration(record.duration_ms)}</span>
         {record.target_app && (
-          <span className="px-1.5 py-0.5 bg-surface-100 dark:bg-surface-800 rounded text-xs">
+          <span
+            style={{
+              padding: "2px 8px",
+              borderRadius: "6px",
+              background: "var(--color-fill-secondary)",
+              fontSize: "11px",
+            }}
+          >
             {record.target_app}
           </span>
         )}
       </div>
+
+      <style>{`
+        .card:hover .flex > div[style*="opacity: 0"] {
+          opacity: 1 !important;
+        }
+        .group:hover div[style*="opacity: 0"] {
+          opacity: 1 !important;
+        }
+      `}</style>
     </div>
   );
 }

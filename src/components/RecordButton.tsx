@@ -1,5 +1,4 @@
 import { Mic, Square, Loader2 } from "lucide-react";
-import clsx from "clsx";
 import { useRecordingStore, RecordingState } from "../stores/recordingStore";
 
 export default function RecordButton() {
@@ -14,30 +13,48 @@ export default function RecordButton() {
   };
 
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-center gap-5">
       <button
         onClick={handleClick}
         disabled={state === "processing"}
-        className={clsx(
-          "relative w-20 h-20 rounded-full flex items-center justify-center",
-          "transition-all duration-200 focus:outline-none",
-          state === "idle" &&
-            "bg-accent-600 hover:bg-accent-700 hover:scale-105 shadow-lg shadow-accent-600/25",
-          state === "recording" &&
-            "bg-red-500 hover:bg-red-600 scale-110 shadow-lg shadow-red-500/30",
-          state === "processing" &&
-            "bg-surface-300 dark:bg-surface-700 cursor-not-allowed"
-        )}
+        style={{
+          width: "72px",
+          height: "72px",
+          borderRadius: "50%",
+          border: "none",
+          cursor: state === "processing" ? "not-allowed" : "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          transition: "transform 0.2s cubic-bezier(0.87, 0, 0.13, 1), box-shadow 0.2s ease",
+          transform: state === "recording" ? "scale(1.08)" : "scale(1)",
+          background:
+            state === "idle"
+              ? "var(--color-text)"
+              : state === "recording"
+              ? "#ff453a"
+              : "var(--color-fill-secondary)",
+          boxShadow:
+            state === "idle"
+              ? "0 4px 20px rgba(0,0,0,0.12)"
+              : state === "recording"
+              ? "0 4px 24px rgba(255,69,58,0.3)"
+              : "none",
+        }}
       >
-        {state === "recording" && (
-          <div className="absolute inset-0 rounded-full border-2 border-red-400 animate-pulse-ring" />
-        )}
         <RecordIcon state={state} />
       </button>
 
-      <span className="text-sm font-medium text-surface-600 dark:text-surface-400">
-        {state === "idle" && "Press to record"}
-        {state === "recording" && "Recording... tap to stop"}
+      <span
+        style={{
+          fontSize: "13px",
+          fontWeight: 450,
+          color: "var(--color-text-secondary)",
+          letterSpacing: "-0.01em",
+        }}
+      >
+        {state === "idle" && "Ctrl+Shift+S to record"}
+        {state === "recording" && "Listening..."}
         {state === "processing" && "Transcribing..."}
       </span>
     </div>
@@ -45,11 +62,12 @@ export default function RecordButton() {
 }
 
 function RecordIcon({ state }: { state: RecordingState }) {
+  const color = state === "idle" || state === "recording" ? "var(--color-bg)" : "var(--color-text-tertiary)";
   if (state === "processing") {
-    return <Loader2 className="w-8 h-8 text-surface-500 animate-spin" />;
+    return <Loader2 style={{ width: "24px", height: "24px", color }} className="animate-spin" />;
   }
   if (state === "recording") {
-    return <Square className="w-6 h-6 text-white fill-white" />;
+    return <Square style={{ width: "20px", height: "20px", color, fill: color }} />;
   }
-  return <Mic className="w-8 h-8 text-white" />;
+  return <Mic style={{ width: "26px", height: "26px", color }} />;
 }

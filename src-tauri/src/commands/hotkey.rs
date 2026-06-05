@@ -1,15 +1,18 @@
-use tauri::Emitter;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 static FN_MONITOR_ACTIVE: AtomicBool = AtomicBool::new(false);
 
 #[tauri::command]
 pub async fn start_fn_key_monitor(app: tauri::AppHandle) -> Result<(), String> {
-    if FN_MONITOR_ACTIVE.swap(true, Ordering::SeqCst) {
-        return Ok(());
-    }
+    #[cfg(target_os = "macos")]
+    {
+        use tauri::Emitter;
 
-    std::thread::spawn(move || {
+        if FN_MONITOR_ACTIVE.swap(true, Ordering::SeqCst) {
+            return Ok(());
+        }
+
+        std::thread::spawn(move || {
         unsafe {
             extern "C" {
                 fn CGEventTapCreate(
@@ -95,8 +98,14 @@ pub async fn start_fn_key_monitor(app: tauri::AppHandle) -> Result<(), String> {
 
             log::info!("Fn key monitor started");
             CFRunLoopRun();
-        }
-    });
+        });
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        // Windows doesn't have an Fn key monitor yet
+        log::info!("Fn key monitoring not implemented on Windows");
+    }
 
     Ok(())
 }

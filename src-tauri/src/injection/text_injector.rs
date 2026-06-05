@@ -1,8 +1,13 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::process::Command;
 use std::thread;
 use std::time::Duration;
+
+#[cfg(target_os = "macos")]
+use std::process::Command;
+
+#[cfg(target_os = "windows")]
+use clipboard_win::{formats, set_clipboard};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum InjectionStrategy {
@@ -49,6 +54,7 @@ impl TextInjector {
         Ok(())
     }
 
+    #[cfg(target_os = "macos")]
     fn simulate_paste(&self) -> Result<()> {
         unsafe {
             extern "C" {
@@ -91,6 +97,27 @@ impl TextInjector {
         Ok(())
     }
 
+    #[cfg(target_os = "windows")]
+    fn simulate_paste(&self) -> Result<()> {
+        use enigo::{Enigo, Key, Keyboard, Settings};
+
+        let mut enigo = Enigo::new(&Settings::default())
+            .map_err(|e| anyhow::anyhow!("Failed to create Enigo instance: {}", e))?;
+
+        // Simulate Ctrl+V on Windows
+        enigo.key(Key::Control, enigo::Direction::Press)
+            .map_err(|e| anyhow::anyhow!("Failed to press Ctrl: {}", e))?;
+        thread::sleep(Duration::from_millis(10));
+        enigo.key(Key::Unicode('v'), enigo::Direction::Click)
+            .map_err(|e| anyhow::anyhow!("Failed to press V: {}", e))?;
+        thread::sleep(Duration::from_millis(10));
+        enigo.key(Key::Control, enigo::Direction::Release)
+            .map_err(|e| anyhow::anyhow!("Failed to release Ctrl: {}", e))?;
+
+        Ok(())
+    }
+
+    #[cfg(target_os = "macos")]
     fn set_clipboard(&self, text: &str) -> Result<()> {
         use std::io::Write;
         let mut child = Command::new("pbcopy")
@@ -104,10 +131,37 @@ impl TextInjector {
         Ok(())
     }
 
+    #[cfg(target_os = "windows")]
+    fn set_clipboard(&self, text: &str) -> Result<()> {
+        set_clipboard(formats::Unicode, text)
+            .map_err(|e| anyhow::anyhow!("Failed to set clipboard: {}", e))?;
+        Ok(())
+    }
+
+    #[cfg(target_os = "macos")]
     pub fn get_focused_app(&self) -> Option<String> {
         let output = Command::new("osascript")
             .arg("-e")
             .arg(r#"tell application "System Events" to get name of first application process whose frontmost is true"#)
+            .output()
+            .ok()?;
+
+        let name = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if name.is_empty() {
+            None
+        } else {
+            Some(name)
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    pub fn get_focused_app(&self) -> Option<String> {
+        use std::process::Command;
+
+        // Use PowerShell to get the foreground window title
+        let output = Command::new("powershell")
+            .arg("-Command")
+            .arg("Add-Type @'\nusing System;\nusing System.Runtime.InteropServices;\npublic class Win32 {\n    [DllImport(\"user32.dll\")]\n    public static extern IntPtr GetForegroundWindow();\n    [DllImport(\"user32.dll\")]\n    public static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder text, int count);\n}\n'@; $handle = [Win32]::GetForegroundWindow(); $title = New-Object System.Text.StringBuilder 256; [Win32]::GetWindowText($handle, $title, 256) | Out-Null; $title.ToString()")
             .output()
             .ok()?;
 

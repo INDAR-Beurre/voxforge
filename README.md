@@ -4,14 +4,14 @@
 
 <p align="center">
   <a href="https://github.com/INDAR-Beurre/voxforge/releases/latest"><img src="https://img.shields.io/github/v/release/INDAR-Beurre/voxforge?style=for-the-badge&color=0358f7&label=release" alt="Latest release"></a>
-  <img src="https://img.shields.io/badge/platform-macOS-1a1a1d?style=for-the-badge&logo=apple&logoColor=white" alt="Platform">
+  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows-1a1a1d?style=for-the-badge&logo=apple&logoColor=white" alt="Platform">
   <img src="https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge" alt="License">
   <img src="https://img.shields.io/badge/built%20with-Tauri%202-ff8c42?style=for-the-badge" alt="Built with Tauri">
   <img src="https://img.shields.io/badge/powered%20by-Whisper-0358f7?style=for-the-badge" alt="Powered by Whisper">
 </p>
 
 <p align="center">
-  <strong>Privacy-first voice dictation for macOS.</strong><br>
+  <strong>Privacy-first voice dictation for macOS and Windows.</strong><br>
   Hold a key, speak, release — text appears in any focused app. No cloud. No tracking. Just your voice, on your machine.
 </p>
 
@@ -28,13 +28,19 @@
 
 ## Install
 
+### macOS
+
 Download the latest `.dmg` from the [Releases page](https://github.com/INDAR-Beurre/voxforge/releases/latest), drag `VoxForge.app` into `/Applications`, and launch it. On first run, macOS will ask for **Microphone** and **Accessibility** access — both can be granted in one click from the Dashboard.
 
 > **Note:** VoxForge is unsigned for now, so you may need to right-click → Open the first time. The full source builds reproducibly from this repo.
 
+### Windows
+
+Download the latest `.msi` or `.exe` installer from the [Releases page](https://github.com/INDAR-Beurre/voxforge/releases/latest) and run it. Windows Defender SmartScreen may show a warning since the app is unsigned — click "More info" then "Run anyway".
+
 ## What is VoxForge?
 
-VoxForge is a push-to-talk voice dictation app for macOS. It runs Whisper locally to transcribe your speech, then pastes the result into whatever app has focus — code editors, terminals, browsers, chat apps, notes. **Audio never leaves your machine.** Optional cloud endpoints (OpenAI-compatible) are available if you want them, but the default is fully offline.
+VoxForge is a push-to-talk voice dictation app for macOS and Windows. It runs Whisper locally to transcribe your speech, then pastes the result into whatever app has focus — code editors, terminals, browsers, chat apps, notes. **Audio never leaves your machine.** Optional cloud endpoints (OpenAI-compatible) are available if you want them, but the default is fully offline.
 
 ## Features
 
@@ -44,11 +50,12 @@ VoxForge is a push-to-talk voice dictation app for macOS. It runs Whisper locall
 - ⚡ **Fast & lightweight** — native Tauri 2 shell, no Electron. The Tauri binary is ~12 MB.
 - 📝 **Custom dictionary** — add technical terms, camelCase identifiers, abbreviations, and names.
 - 🧹 **Post-processing** — capitalization, filler-word removal, punctuation cleanup.
-- 🔁 **Universal injection** — types into any focused macOS app via clipboard + `CGEvent`.
+- 🔁 **Universal injection** — types into any focused app via clipboard + keyboard simulation.
 - 📚 **Searchable history** — every transcription saved locally in SQLite. Star, re-inject, export.
 - 📊 **Usage analytics** — words per day, total duration, WPM. All stored locally.
 - 🔐 **Privacy center** — clear explanation of what stays on your machine.
 - 🎛️ **Per-app profiles** — different injection behaviour for code editors, terminals, and chat.
+- 💻 **Cross-platform** — works on macOS (Intel & Apple Silicon) and Windows 10/11.
 
 ## Screenshots
 
@@ -88,24 +95,31 @@ Every transcription is saved with a timestamp, word count, duration, and the app
 | ASR | [whisper.cpp](https://github.com/ggerganov/whisper.cpp) (via `whisper-rs`) | Best open-source speech-to-text |
 | Audio | [cpal](https://github.com/RustAudio/cpal) | Cross-platform audio I/O |
 | Storage | SQLite (via `rusqlite`) | Embedded, no server needed |
-| Injection | `pbcopy` + `CGEventPost` | Universal, app-agnostic |
+| Injection | Clipboard + keyboard simulation | Universal, app-agnostic |
 
 ## Requirements
 
+### macOS
 - macOS **11 Big Sur** or later
 - Apple Silicon (recommended) or Intel
 - ~200 MB disk for a Whisper model (Base). 3 GB+ for Large-v3
 - Microphone permission
 - Accessibility permission (for global shortcuts and text injection)
 
+### Windows
+- Windows **10** or **11**
+- x64 processor
+- ~200 MB disk for a Whisper model (Base). 3 GB+ for Large-v3
+- Microphone permission
+
 ## Keyboard shortcuts
 
 | Shortcut | Action |
 | --- | --- |
 | `Ctrl + Shift + S` | **Push-to-talk** — hold to record, release to transcribe & inject |
-| `fn` / Globe | Push-to-talk (requires Accessibility permission) |
-| `⌘ + Q` | Quit VoxForge |
-| `⌘ + W` | Close the main window (app stays in tray) |
+| `fn` / Globe (macOS only) | Push-to-talk (requires Accessibility permission) |
+| `⌘ + Q` (macOS) / `Alt + F4` (Windows) | Quit VoxForge |
+| `⌘ + W` (macOS) / `Ctrl + W` (Windows) | Close the main window (app stays in tray) |
 
 ## Architecture
 
@@ -158,6 +172,8 @@ Download models from the **Models** tab. The first one downloaded is auto-loaded
 
 ### Prerequisites
 
+#### macOS
+
 ```bash
 # Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -167,6 +183,18 @@ brew install node
 
 # Xcode command-line tools (for cpal / whisper)
 xcode-select --install
+```
+
+#### Windows
+
+```powershell
+# Install Rust from https://rustup.rs/
+
+# Install Node.js 18+ from https://nodejs.org/
+
+# Install Visual Studio Build Tools (required for Rust compilation)
+# Download from https://visualstudio.microsoft.com/downloads/
+# Select "Desktop development with C++" workload
 ```
 
 ### Run in dev mode
@@ -180,18 +208,30 @@ npm run tauri dev
 
 The app launches with hot-reload for the frontend and auto-rebuild for the Rust backend.
 
-### Build a release `.dmg`
+### Build a release
+
+#### macOS
 
 ```bash
 npm run tauri build
 ```
 
 Outputs:
-
 - `src-tauri/target/release/bundle/macos/VoxForge.app`
 - `src-tauri/target/release/bundle/dmg/VoxForge_1.0.0_aarch64.dmg`
 
 `scripts/post-build.sh` injects the required `Info.plist` keys (`NSMicrophoneUsageDescription`, `NSAppleEventsUsageDescription`) that Tauri doesn't add automatically.
+
+#### Windows
+
+```powershell
+npm run tauri build
+```
+
+Outputs:
+- `src-tauri/target/release/VoxForge.exe`
+- `src-tauri/target/release/bundle/msi/VoxForge_1.0.0_x64_en-US.msi`
+- `src-tauri/target/release/bundle/nsis/VoxForge_1.0.0_x64-setup.exe`
 
 ### Regenerate the app icon
 
@@ -205,7 +245,9 @@ This produces 14 PNGs (32×32 → 512×512, including Windows store sizes), `ico
 
 ## Configuration
 
-VoxForge stores everything in your macOS Application Support directory:
+### macOS
+
+VoxForge stores everything in your Application Support directory:
 
 ```
 ~/Library/Application Support/com.voxforge.app/
@@ -216,15 +258,29 @@ VoxForge stores everything in your macOS Application Support directory:
     └── ...
 ```
 
+### Windows
+
+VoxForge stores everything in your AppData directory:
+
+```
+%APPDATA%\com.voxforge.app\
+├── voxforge.db           # SQLite: history, settings, dictionary, stats
+└── models\               # Downloaded Whisper model files
+    ├── ggml-base.bin
+    ├── ggml-small.bin
+    └── ...
+```
+
 Nothing is sent off-device unless you enable a cloud transcription endpoint in Settings.
 
 ## Roadmap
 
+- [x] Windows support
+- [ ] Linux builds
 - [ ] Apple Silicon–optimized Whisper inference (Core ML)
 - [ ] Voice commands ("new line", "period", custom triggers)
 - [ ] Snippet expansion ("my email" → user@domain.com)
 - [ ] iCloud sync for dictionary + history (opt-in)
-- [ ] Windows & Linux builds
 - [ ] Signed + notarized releases (requires Apple Developer ID)
 
 See [`docs/roadmap.md`](docs/roadmap.md) for the long-term plan.

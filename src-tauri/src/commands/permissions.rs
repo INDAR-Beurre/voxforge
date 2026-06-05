@@ -1,34 +1,59 @@
+#[cfg(target_os = "macos")]
 use std::process::Command;
 
 #[tauri::command]
 pub async fn open_accessibility_settings() -> Result<(), String> {
-    // Try macOS 13+ URL first, fall back to older one
-    let result = Command::new("open")
-        .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
-        .spawn();
+    #[cfg(target_os = "macos")]
+    {
+        // Try macOS 13+ URL first, fall back to older one
+        let result = Command::new("open")
+            .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
+            .spawn();
 
-    if result.is_err() {
-        Command::new("open")
-            .arg("x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Accessibility")
-            .spawn()
-            .map_err(|e| e.to_string())?;
+        if result.is_err() {
+            Command::new("open")
+                .arg("x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Accessibility")
+                .spawn()
+                .map_err(|e| e.to_string())?;
+        }
     }
+
+    #[cfg(target_os = "windows")]
+    {
+        // Windows doesn't require accessibility permissions
+        log::info!("Windows doesn't require accessibility permissions");
+    }
+
     Ok(())
 }
 
 #[tauri::command]
 pub async fn open_microphone_settings() -> Result<(), String> {
-    // macOS 13+ (Ventura)
-    let result = Command::new("open")
-        .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")
-        .spawn();
+    #[cfg(target_os = "macos")]
+    {
+        // macOS 13+ (Ventura)
+        let result = Command::new("open")
+            .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")
+            .spawn();
 
-    if result.is_err() {
-        Command::new("open")
-            .arg("x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Microphone")
+        if result.is_err() {
+            Command::new("open")
+                .arg("x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Microphone")
+                .spawn()
+                .map_err(|e| e.to_string())?;
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        use std::process::Command;
+        // Open Windows Privacy > Microphone settings
+        Command::new("cmd")
+            .args(&["/C", "start", "ms-settings:privacy-microphone"])
             .spawn()
             .map_err(|e| e.to_string())?;
     }
+
     Ok(())
 }
 
@@ -51,18 +76,28 @@ pub async fn check_accessibility_permission() -> Result<bool, String> {
 
 #[tauri::command]
 pub async fn check_microphone_permission() -> Result<String, String> {
-    // Try to list audio devices - if we get any, we have permission
-    // If permission was never asked, attempting to record will trigger the prompt
-    let output = Command::new("osascript")
-        .arg("-e")
-        .arg(r#"do shell script "system_profiler SPAudioDataType 2>/dev/null | head -1""#)
-        .output()
-        .map_err(|e| e.to_string())?;
+    #[cfg(target_os = "macos")]
+    {
+        use std::process::Command;
+        // Try to list audio devices - if we get any, we have permission
+        // If permission was never asked, attempting to record will trigger the prompt
+        let output = Command::new("osascript")
+            .arg("-e")
+            .arg(r#"do shell script "system_profiler SPAudioDataType 2>/dev/null | head -1""#)
+            .output()
+            .map_err(|e| e.to_string())?;
 
-    if output.status.success() {
+        if output.status.success() {
+            Ok("granted".to_string())
+        } else {
+            Ok("unknown".to_string())
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        // On Windows, assume granted - actual check happens when recording starts
         Ok("granted".to_string())
-    } else {
-        Ok("unknown".to_string())
     }
 }
 

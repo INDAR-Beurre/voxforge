@@ -15,7 +15,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["tray-icon", "macos-private-api"] }
+tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-opener = "2"
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-clipboard-manager = "2"
@@ -43,6 +43,10 @@ regex-lite = "0.1"
 futures-util = "0.3"
 
 [target.'cfg(target_os = "macos")'.dependencies]
+tauri = { version = "2", features = ["tray-icon", "macos-private-api"] }
 cocoa = "0.26"
 objc = "0.2"
 core-foundation = "0.10"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+clipboard-win = "5.4"
